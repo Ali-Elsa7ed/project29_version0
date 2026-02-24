@@ -5,9 +5,9 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Ali-Elsa7ed/project29_version4.git"
+    "url": "https://github.com/Ali-Elsa7ed/project29_version0.git"
   },
-  "homepage": "https://Ali-Elsa7ed.github.io/project29_version4",
+  "homepage": "https://Ali-Elsa7ed.github.io/project29_version0",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
