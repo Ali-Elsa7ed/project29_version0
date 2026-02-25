@@ -5,6 +5,8 @@ import {
   LogIn, LogOut, User, Settings, Eye, MessageCircle, Calendar,
   Target, Star, Bell, Receipt, Download, Filter
 } from 'lucide-react';
+import AdminDashboard from './components/admin/AdminDashboard';
+import LoginModal from './components/LoginModal';
 
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -137,6 +139,7 @@ const App = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [view, setView] = useState('home');
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [projects, setProjects] = useState(initialProjects);
@@ -145,6 +148,8 @@ const App = () => {
   const [selectedCategory, setSelectedCategory] = useState('الكل');
   const [favorites, setFavorites] = useState([]);
   const [userDonations, setUserDonations] = useState([]);
+  const [showAdminDebug, setShowAdminDebug] = useState(false);
+  const [isAdminLoginPage, setIsAdminLoginPage] = useState(false);
 
   const categories = ['الكل', 'تقنية', 'زراعة', 'حرف', 'ثقافة', 'تعليم', 'صحة'];
   // ------------- صفحة عن المنصة (About) -------------
@@ -795,6 +800,66 @@ const App = () => {
     const savedAllProjects = localStorage.getItem('allProjects');
     const savedDonations = localStorage.getItem('userDonations');
 
+    // إعداد بيانات اختبار سريعة إذا لم تكن موجودة
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // التحقق من عدم وجود بيانات اختبار
+    const testEmails = ['ali@admin.com', 'john@example.com', 'sarah@example.com'];
+    const hasTestUsers = testEmails.some(email => users.some(u => u.email === email));
+    
+    if (!hasTestUsers) {
+      const testUsers = [
+        {
+          id: Date.now() + 1,
+          email: 'ali@admin.com',
+          password: 'admin',
+          type: 'admin',
+          name: 'علي - مسؤول النظام',
+          fullName: 'علي محمود - مسؤول النظام',
+          nationalId: '12345678901234',
+          phoneNumber: '01012345678',
+          address: 'مصر، القاهرة',
+          governorate: 'القاهرة',
+          notifications: [],
+          points: 1000,
+          balance: 99999
+        },
+        {
+          id: Date.now() + 2,
+          email: 'john@example.com',
+          password: 'owner123',
+          type: 'owner',
+          name: 'أحمد صاحب المشروع',
+          fullName: 'أحمد محمد علي',
+          nationalId: '22345678901234',
+          phoneNumber: '01112345678',
+          address: 'مصر، الجيزة',
+          governorate: 'الجيزة',
+          notifications: [],
+          points: 500,
+          balance: 5000
+        },
+        {
+          id: Date.now() + 3,
+          email: 'sarah@example.com',
+          password: 'user123',
+          type: 'user',
+          name: 'سارة المستخدمة',
+          fullName: 'سارة أحمد سعيد',
+          nationalId: '32345678901234',
+          phoneNumber: '01212345678',
+          address: 'مصر، الإسكندرية',
+          governorate: 'الإسكندرية',
+          notifications: [],
+          points: 150,
+          balance: 2000
+        }
+      ];
+      
+      const updatedUsers = [...users, ...testUsers];
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+    }
+
     if (savedUser) {
       const parsed = JSON.parse(savedUser);
       setCurrentUser({ ...parsed, id: String(parsed.id) });
@@ -907,6 +972,41 @@ const App = () => {
         setCurrentUser({ ...updatedCurrent, id: String(updatedCurrent.id) });
         localStorage.setItem('currentUser', JSON.stringify({ ...updatedCurrent, id: String(updatedCurrent.id) }));
       }
+    }
+  };
+
+  // ----------- دالة تسجيل دخول سريع للمسؤول (للاختبار) ----------
+  const quickAdminLogin = () => {
+    setIsAdminLoginPage(true);
+  };
+
+  // ------------- دالة تسجيل الدخول من LoginModal -------------
+  const handleLoginModalSubmit = (credentials) => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find(u => u.email === credentials.email && u.password === credentials.password);
+    
+    if (user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      setCurrentUser(user);
+
+      // تحميل المفضلة الخاصة بهذا المستخدم
+      const userFavorites = localStorage.getItem(`favorites_${user.id}`);
+      if (userFavorites) {
+        setFavorites(JSON.parse(userFavorites));
+      } else {
+        setFavorites([]);
+      }
+
+      // إذا كان مالك مشروع، اعرض صفحة الاشتراك
+      if (user.type === 'owner') {
+        setIsLoginModalOpen(false);
+        setView('subscription-plan');
+      } else {
+        setIsLoginModalOpen(false);
+        setView('home');
+      }
+    } else {
+      alert('بيانات الدخول غير صحيحة');
     }
   };
 
@@ -1583,6 +1683,140 @@ const App = () => {
       </div>
     );
   };
+
+  // ------------- صفحة تسجيل دخول الأدمن فقط (Admin Login) -------------
+  const AdminLoginPage = () => {
+    const [adminEmail, setAdminEmail] = useState('ali@admin.com');
+    const [adminPassword, setAdminPassword] = useState('admin');
+    const [adminError, setAdminError] = useState('');
+    const [adminLoading, setAdminLoading] = useState(false);
+
+    const handleAdminLogin = (e) => {
+      e.preventDefault();
+      setAdminError('');
+      setAdminLoading(true);
+
+      setTimeout(() => {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const admin = users.find(u => u.email === adminEmail && u.password === adminPassword && u.type === 'admin');
+
+        if (admin) {
+          localStorage.setItem('currentUser', JSON.stringify(admin));
+          setCurrentUser(admin);
+          setIsAdminLoginPage(false);
+          setView('admin');
+        } else {
+          setAdminError('بيانات دخول غير صحيحة أو ليس حساب مسؤول');
+        }
+        setAdminLoading(false);
+      }, 500);
+    };
+
+    return (
+      <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'}`}>
+        {/* زر الرجوع */}
+        <div className="absolute top-6 right-6 z-10">
+          <button
+            onClick={() => setIsAdminLoginPage(false)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-all hover:scale-105 shadow-lg ${darkMode
+              ? 'bg-gray-800 text-white hover:bg-gray-700'
+              : 'bg-white text-gray-800 hover:bg-gray-50'
+              }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            العودة للرئيسية
+          </button>
+        </div>
+
+        <div className="flex items-center justify-center min-h-screen py-12 px-4">
+          <div className={`max-w-md w-full p-10 rounded-3xl shadow-2xl backdrop-blur-sm ${darkMode ? 'bg-gray-800/95' : 'bg-white/95'}`}>
+            {/* الأيقونة والعنوان */}
+            <div className="text-center mb-10">
+              <div className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center ${darkMode
+                ? 'bg-gradient-to-br from-red-600 to-orange-600'
+                : 'bg-gradient-to-br from-red-500 to-orange-500'
+                } shadow-lg`}>
+                <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                </svg>
+              </div>
+
+              <h2 className={`text-4xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                لوحة التحكم
+              </h2>
+              <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                دخول حصري للمسؤولين فقط 🔒
+              </p>
+            </div>
+
+            {/* Error Message */}
+            {adminError && (
+              <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-xs">!</span>
+                </div>
+                <p className={`text-sm ${darkMode ? 'text-red-400' : 'text-red-600'}`}>{adminError}</p>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleAdminLogin} className="space-y-5 mb-8">
+              {/* Email */}
+              <div>
+                <label className={`block mb-2 font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  📧 البريد الإلكتروني
+                </label>
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="ali@admin.com"
+                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-red-500 transition-all ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-300 placeholder-gray-500'}`}
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className={`block mb-2 font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  🔑 كلمة المرور
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={`w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:border-red-500 transition-all ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-gray-50 border-gray-300 placeholder-gray-500'}`}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={adminLoading}
+                className="w-full mt-8 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold rounded-xl transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {adminLoading ? '⏳ جاري التحقق...' : '🔓 دخول المسؤول'}
+              </button>
+            </form>
+
+            {/* Info Box */}
+            <div className={`p-4 rounded-lg ${
+              darkMode
+                ? 'bg-blue-500/10 border border-blue-500/20'
+                : 'bg-blue-50 border border-blue-200'
+            }`}>
+              <p className={`text-sm ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>
+                <strong>ملاحظة:</strong> هذه الصفحة حصرية لمسؤولي النظام فقط. تأكد من سرية بيانات الدخول الخاصة بك.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ------------- مكون البطاقة (ProjectCard) -------------
   const ProjectCard = ({ project, showFavoriteButton = true }) => {
     const progress = (project.raised / project.goal) * 100;
@@ -4875,7 +5109,7 @@ const App = () => {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <button
-                onClick={() => setView('login')}
+                onClick={() => setIsLoginModalOpen(true)}
                 className="group relative px-8 py-4 bg-white text-blue-600 rounded-xl font-bold text-lg shadow-2xl hover:shadow-3xl transition-all hover:scale-105"
               >
                 <span className="relative z-10">ابدأ الآن مجاناً</span>
@@ -5520,10 +5754,55 @@ const App = () => {
   // ------------- التجميع النهائي للعرض -------------
   return (
     <div className={`${darkMode ? 'dark' : ''}`} style={{ fontFamily: 'Cairo, sans-serif' }}>
-      {view !== 'login' && view !== 'subscription-plan' && <Navbar />}
+      {/* شريط تديبوج مخفي */}
+      <button
+        onClick={() => setShowAdminDebug(!showAdminDebug)}
+        className="fixed bottom-4 right-4 z-40 w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full flex items-center justify-center font-bold text-sm"
+        title="Click to toggle debug"
+      >
+        🔧
+      </button>
+      
+      {showAdminDebug && (
+        <div className={`fixed bottom-16 right-4 z-40 p-4 rounded-lg shadow-xl max-w-xs ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} border-2 border-purple-600`}>
+          <p className="text-sm mb-3">📊 <strong>حالة التطبيق:</strong></p>
+          <p className="text-xs mb-2">👤 المستخدم: {currentUser ? `${currentUser.name} (${currentUser.type})` : 'لا أحد'}</p>
+          <p className="text-xs mb-3">📄 الصفحة الحالية: {view}</p>
+          <button
+            onClick={quickAdminLogin}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-xs font-bold mb-2"
+          >
+            🔓 فتح صفحة دخول المسؤول
+          </button>
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.reload();
+            }}
+            className="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-xs font-bold"
+          >
+            🔄 مسح البيانات وتحديث
+          </button>
+        </div>
+      )}
+      
+      {view !== 'login' && view !== 'subscription-plan' && view !== 'admin' && <Navbar darkMode={darkMode} setDarkMode={setDarkMode} currentUser={currentUser} setCurrentUser={setCurrentUser} view={view} setView={setView} favorites={favorites} />}
+
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)} 
+        onLogin={handleLoginModalSubmit} 
+        onAdminLogin={() => {
+          setIsLoginModalOpen(false);
+          setIsAdminLoginPage(true);
+        }}
+        darkMode={darkMode} 
+      />
 
       {view === 'login' && <LoginPage />}
+      {isAdminLoginPage && <AdminLoginPage />}
       {view === 'subscription-plan' && <SubscriptionPlanPage />}
+      {view === 'admin' && <AdminDashboard darkMode={darkMode} currentUser={currentUser} setCurrentUser={setCurrentUser} setView={setView} />}
       {view === 'home' && !currentUser && <LandingPage />}
       {view === 'home' && currentUser && <HomePage />}
       {view === 'projects' && <HomePage />}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Heart, Settings, Plus, Bell, User, LogOut, LogIn, Target } from 'lucide-react';
+import { Sun, Moon, Heart, Settings, Plus, Bell, User, LogOut, LogIn, Target, Shield } from 'lucide-react';
 
 export default function Navbar({ darkMode, setDarkMode, currentUser, setCurrentUser, view, setView, favorites = [] }) {
   return (
@@ -73,6 +73,18 @@ export default function Navbar({ darkMode, setDarkMode, currentUser, setCurrentU
                       <span className="hidden md:inline">إضافة مشروع</span>
                     </button>
                   </>
+                )}
+
+                {/* زر Admin Panel */}
+                {currentUser.type === 'admin' && (
+                  <button
+                    onClick={() => setView('admin')}
+                    className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-colors ${view === 'admin' ? 'bg-red-600 text-white' : darkMode ? 'bg-gray-700 text-red-400 hover:bg-red-600 hover:text-white' : 'bg-red-100 text-red-600 hover:bg-red-600 hover:text-white'}`}
+                    title="Admin Panel"
+                  >
+                    <Shield className="w-5 h-5" />
+                    <span className="hidden lg:inline">Admin Panel</span>
+                  </button>
                 )}
 
                 {/* زر الإشعارات */}
